@@ -23,6 +23,7 @@ public class EventControler {
             getEventFromFile();
         }
     }
+
     //在表中添加一个事件
     public boolean addEvent(Event e){
         events.add(e);

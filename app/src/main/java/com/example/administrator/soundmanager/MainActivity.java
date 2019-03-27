@@ -14,6 +14,8 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 
+import com.example.administrator.soundmanager.util.LOG;
+
 
 public class MainActivity extends BasicActivity {
     private SeekBar ringBar;
@@ -29,6 +31,7 @@ public class MainActivity extends BasicActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        LOG.d("MainActivity","..............onCreate");
         initView();
         initBar();
         //开启音量管理服务。
@@ -37,6 +40,7 @@ public class MainActivity extends BasicActivity {
     }
     //初始化控件
     void initView() {
+        LOG.d("MainActivity","..............initView");
         findViewById(R.id.main_event_exit).setOnClickListener(listener);
         findViewById(R.id.main_event_show).setOnClickListener(listener);
         serviceBox=(CheckBox) findViewById(R.id.main_service_set);
@@ -57,6 +61,7 @@ public class MainActivity extends BasicActivity {
 
     //初始化各进度条的值
     void initBar(){
+        LOG.d("MainActivity","..............initBar");
         am = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         changeBar();//先设定各进度条的值。再设置各进度条的最大值。
         callBar.setMax( am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL));
@@ -79,12 +84,11 @@ public class MainActivity extends BasicActivity {
             if (soundSer.isRuning()){
                 soundSer.end();
                 serviceBox.setChecked(false);
-            }else {
+            }else{
                 soundSer.start();
                 serviceBox.setChecked(true);
             }
         }
-
     }
 
     //注册音量发生变化时接收的广播
@@ -103,18 +107,27 @@ public class MainActivity extends BasicActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        //动态注册广播监听，音量改变事件。
+        LOG.d("MainActivity","..............onStart");
+        changeBar();
+        //注册广播监听，音量改变事件。
         myRegisterReceiver();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        changeBar();
+        LOG.d("MainActivity","..............onStop");
         //销毁注册的广播。
         myUnRegisterRecevier();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        LOG.d("MainActivity","..............onDestroy");
+        //服务解绑
+        unbindService(serviceConnection);
+    }
     //创建点击事件观察者
     View.OnClickListener listener=new View.OnClickListener() {
         @Override
@@ -149,7 +162,6 @@ public class MainActivity extends BasicActivity {
             }else if (seekBar==alarmBar){
                 am.setStreamVolume(AudioManager.STREAM_ALARM,i,0);
             }
-            //每次更改系统音量，有效期
         }
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
@@ -182,11 +194,11 @@ public class MainActivity extends BasicActivity {
             if(soundSer==null){
                 soundSer=(SoundSetService.MyBinder)iBinder;
             }
-            Log.d("MainActivity","bind success");
+            LOG.d("MainActivity","..............bind success");
         }
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            Log.d("MainActivity","bind failed");
+            LOG.d("MainActivity","..............bind failed");
         }
     };
 }

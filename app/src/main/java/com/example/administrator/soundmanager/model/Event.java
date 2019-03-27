@@ -15,16 +15,17 @@ public class Event implements Comparable<Event>{
     public Event(){
     }
     public Event(String eventName, String startTime, String endTime, int ring, int music, int alarm, int call) {
+        setEventId(counter);
         this.eventName = eventName;
         this.startTime = startTime;
         this.endTime = endTime;
+        //设定用来排序的时间值
         seteTime(endTime);
         setsTime(startTime);
         this.ring = ring;
         this.music = music;
         this.alarm = alarm;
         this.call = call;
-        setEventId(counter);
     }
 
     public Event(int eventId, String eventName, String startTime, String endTime, int ring, int music, int alarm, int call) {
@@ -32,6 +33,9 @@ public class Event implements Comparable<Event>{
         this.eventName = eventName;
         this.startTime = startTime;
         this.endTime = endTime;
+        //设定用来排序的时间值
+        setsTime(startTime);
+        seteTime(endTime);
         this.ring = ring;
         this.music = music;
         this.alarm = alarm;
@@ -50,7 +54,7 @@ public class Event implements Comparable<Event>{
         this.sTime = Integer.parseInt(time[0])*60+Integer.parseInt(time[1]);
     }
 
-    public void setEventId(int eventId) {
+    private void setEventId(int eventId) {
         this.eventId = eventId;
         if(eventId>=counter){
             counter=eventId+1;

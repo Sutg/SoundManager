@@ -16,7 +16,10 @@ import android.widget.TextView;
 
 import com.example.administrator.soundmanager.controler.EventControler;
 import com.example.administrator.soundmanager.model.Event;
+import com.example.administrator.soundmanager.util.LOG;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class ShowEventsActivity extends BasicActivity {
@@ -29,6 +32,7 @@ public class ShowEventsActivity extends BasicActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_show_events);
+        LOG.d("ShowEventsActivity","..............onCreate");
         eventControler=new EventControler(this);
         initView();
         loadData();
@@ -41,18 +45,24 @@ public class ShowEventsActivity extends BasicActivity {
     }
     //加载初始化数据
     void loadData(){
+        LOG.d("ShowEventsActivity","..............loadData");
+        //获取系统各音频的最大值备用
         AudioManager am = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         ringMax=am.getStreamMaxVolume(AudioManager.STREAM_RING);
         musicMax=am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         alarmMax=am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
         callMax=am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL);
+        //从计划控制器中获取计划表
         eventList=eventControler.getEvents();
     }
     //为list添加适配器和布局管理器
     void showEvents(){
+        LOG.d("ShowEventsActivity","..............showEvents");
+        //布局管理器
         LinearLayoutManager manager =new LinearLayoutManager(this);
         manager.setOrientation(LinearLayoutManager.VERTICAL);
         list.setLayoutManager(manager);
+        //数据适配器
         listAdapter=new ListAdapter(eventList);
         list.setAdapter(listAdapter);
     }
@@ -84,7 +94,14 @@ public class ShowEventsActivity extends BasicActivity {
     class ListAdapter extends RecyclerView.Adapter<ListAdapter.ViewHolder>{
         private List<Event> events;
         public ListAdapter(List<Event> eventList) {
-        events=eventList;
+            events=eventList;
+            //按开始时间升序排序
+            Collections.sort(events, new Comparator<Event>() {
+                @Override
+                public int compare(Event event, Event t1) {
+                    return event.getsTime()-t1.getsTime();
+                }
+            });
         }
 
         @Override
@@ -116,8 +133,9 @@ public class ShowEventsActivity extends BasicActivity {
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             Context mContext=parent.getContext();
-            //不
+
             final ViewHolder holder=new ViewHolder(LayoutInflater.from(mContext).inflate(R.layout.item_event,parent,false));
+            //点击进行编辑
             View.OnClickListener clickListener=new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -127,6 +145,7 @@ public class ShowEventsActivity extends BasicActivity {
                     startActivityForResult(intent,1000);
                 }
             };
+            //长按删除
             View.OnLongClickListener longClickListener=new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View view) {

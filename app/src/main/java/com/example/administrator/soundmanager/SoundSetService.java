@@ -11,10 +11,10 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.example.administrator.soundmanager.controler.EventControler;
 import com.example.administrator.soundmanager.model.Event;
+import com.example.administrator.soundmanager.util.LOG;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -35,11 +35,14 @@ public class SoundSetService extends Service {
     }
     @Override
     public void onCreate() {
+        super.onCreate();
+        LOG.d("SoundSetService","..............onCreate");
         eventList=new EventControler(this).getEvents();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        LOG.d("SoundSetService","..............onStartCommand");
         //设置系统音量
         Message msg=soundHandler.obtainMessage();
         soundHandler.sendMessage(msg);
@@ -54,6 +57,7 @@ public class SoundSetService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        LOG.d("SoundSetService","..............onBind");
         // TODO: Return the communication channel to the service.
        return new MyBinder();
     }
@@ -65,7 +69,7 @@ public class SoundSetService extends Service {
                 am= (AudioManager) getSystemService(this.AUDIO_SERVICE);
             }
             //按开始时间降序排列
-            Collections.sort(eventList);
+           Collections.sort(eventList);
             Event currentEvent=null;
             //获取当前时间
             Calendar calendar= Calendar.getInstance();
@@ -73,15 +77,20 @@ public class SoundSetService extends Service {
             int mHour= calendar.get(Calendar.HOUR_OF_DAY);
             int mMinute=calendar.get(Calendar.MINUTE);
             int currentTime=mHour*60+mMinute;
+            LOG.d("SoundSettService","currentTime= "+currentTime);
             //得到当前最近有效事件。
             Iterator<Event> eventIterator=eventList.iterator();
             while (eventIterator.hasNext()){
                 Event e=eventIterator.next();
-                if(e.getsTime()<=currentTime&&e.geteTime()>=currentTime)
+                LOG.d("SoundSetService",e.toString()+"sTime:"+e.getsTime()+"eTime:"+e.geteTime());
+                if(e.getsTime()<=currentTime && e.geteTime()>=currentTime)
                     currentEvent=e;
             }
-            if(currentEvent!=null)
-               setSysSound(currentEvent);
+            if(currentEvent!=null){
+                setSysSound(currentEvent);
+                LOG.d("SoundSetService","currentEvent : "+currentEvent.toString());
+            }
+
         }
     }
     private void setSysSound(Event e){

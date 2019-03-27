@@ -175,7 +175,7 @@ public class EditEventActivity extends BasicActivity {
         calendar.setTimeInMillis(System.currentTimeMillis());
         mHour= calendar.get(Calendar.HOUR_OF_DAY);
         mMinute=calendar.get(Calendar.MINUTE);
-        String tmpTitle=new StringBuilder().append(calendar.get(Calendar.MONTH)+"-"+calendar.get(Calendar.DAY_OF_MONTH)+"/")
+        String tmpTitle=new StringBuilder().append((calendar.get(Calendar.MONTH)+1)+"-"+calendar.get(Calendar.DAY_OF_MONTH)+"/")
                 .append(mHour < 10 ? "0" + mHour : mHour).append(":")
                 .append(mMinute < 10 ? "0" + mMinute : mMinute)
                 .append("创建").toString();
