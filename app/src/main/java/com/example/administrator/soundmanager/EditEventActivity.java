@@ -53,8 +53,10 @@ public class EditEventActivity extends BasicActivity {
         //事件记录控制器
         eventControler=new EventControler(this);
         if(eventId<0){
+            //新建一个Event
             event=newEvent();
         }else{
+            //从控制器中得到该event的内容
             event=Event.getEvent(eventControler.getEvent(eventId).toString());
             //如果获取事件失败了。new一个。
             if(event==null)
@@ -216,11 +218,9 @@ public class EditEventActivity extends BasicActivity {
     TextWatcher textWatcher =new TextWatcher() {
         @Override
         public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
         }
         @Override
         public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
         }
         @Override
         public void afterTextChanged(Editable editable) {

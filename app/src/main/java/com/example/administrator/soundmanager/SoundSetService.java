@@ -83,8 +83,10 @@ public class SoundSetService extends Service {
             while (eventIterator.hasNext()){
                 Event e=eventIterator.next();
                 LOG.d("SoundSetService",e.toString()+"sTime:"+e.getsTime()+"eTime:"+e.geteTime());
-                if(e.getsTime()<=currentTime && e.geteTime()>=currentTime)
+                if(e.getsTime()<=currentTime && e.geteTime()>=currentTime){
                     currentEvent=e;
+                    break;
+                }
             }
             if(currentEvent!=null){
                 setSysSound(currentEvent);
