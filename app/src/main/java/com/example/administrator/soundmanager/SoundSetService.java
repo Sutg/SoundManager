@@ -1,16 +1,20 @@
 package com.example.administrator.soundmanager;
 
 import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 
 import com.example.administrator.soundmanager.controler.EventControler;
 import com.example.administrator.soundmanager.model.Event;
@@ -22,9 +26,14 @@ import java.util.Iterator;
 import java.util.List;
 
 public class SoundSetService extends Service {
+    private final String TAG="SoundSetService";
     private List<Event> eventList;
     private boolean isRun=true;
+    private int stopCounter=0;
     private AudioManager am;
+    private NotificationManager notificationManager;
+    //配置文件
+    SharedPreferences preferences;
     private Handler soundHandler=new Handler(){
         @Override
         public void handleMessage(Message msg) {
@@ -36,28 +45,34 @@ public class SoundSetService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        LOG.d("SoundSetService","..............onCreate");
+        LOG.d(TAG,"..............onCreate");
         eventList=new EventControler(this).getEvents();
-    }
+        //获得配置文件
+       preferences=PreferenceManager.getDefaultSharedPreferences(this);
+        //读取数据，如果无法找到，则使用默认值
+        isRun=preferences.getBoolean("isRun",true);
 
+        //免打扰权限
+        notificationManager=(NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        LOG.d("SoundSetService","..............onStartCommand");
+        LOG.d(TAG,"..............onStartCommand");
         //设置系统音量
         Message msg=soundHandler.obtainMessage();
         soundHandler.sendMessage(msg);
-        //注册定时事件，每过1分钟自动唤醒服务，使得服务得以长期运行
+        //注册定时事件，每过1分钟自动唤醒服务，使得服务得以长期运行。如果过服务被销毁。则失效
         final AlarmManager alarmManager=(AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        final PendingIntent weakupIntent=PendingIntent.getService(this,0,new
-                Intent(this, SoundSetService.class),0);
+        final PendingIntent weakupIntent=PendingIntent.getService(this,0,new Intent(this, SoundSetService.class),0);
         alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime()+60000, weakupIntent);
-        return START_NOT_STICKY;
+       // 系统自动回收之后，重启该服务。
+        return START_STICKY;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        LOG.d("SoundSetService","..............onBind");
+        LOG.d(TAG,"..............onBind");
         // TODO: Return the communication channel to the service.
        return new MyBinder();
     }
@@ -77,12 +92,12 @@ public class SoundSetService extends Service {
             int mHour= calendar.get(Calendar.HOUR_OF_DAY);
             int mMinute=calendar.get(Calendar.MINUTE);
             int currentTime=mHour*60+mMinute;
-            LOG.d("SoundSettService","currentTime= "+currentTime);
-            //得到当前最近有效事件。
+            LOG.d(TAG,"currentTime= "+currentTime);
+            //得到当前有效事件。
             Iterator<Event> eventIterator=eventList.iterator();
             while (eventIterator.hasNext()){
                 Event e=eventIterator.next();
-                LOG.d("SoundSetService",e.toString()+"sTime:"+e.getsTime()+"eTime:"+e.geteTime());
+                LOG.d(TAG,e.toString()+"sTime:"+e.getsTime()+"eTime:"+e.geteTime());
                 if(e.getsTime()<=currentTime && e.geteTime()>=currentTime){
                     currentEvent=e;
                     break;
@@ -90,12 +105,27 @@ public class SoundSetService extends Service {
             }
             if(currentEvent!=null){
                 setSysSound(currentEvent);
-                LOG.d("SoundSetService","currentEvent : "+currentEvent.toString());
+                LOG.d(TAG,"currentEvent : "+currentEvent.toString());
             }
-
+        }else{//5分钟内不启动自动模式，服务关闭。
+            stopCounter++;
+            if(stopCounter>=5){
+                stopSelf();
+            }
         }
     }
     private void setSysSound(Event e){
+        if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+            if(notificationManager!=null&&notificationManager.isNotificationPolicyAccessGranted()) {
+                am.setStreamVolume(AudioManager.STREAM_RING,e.getRing(),0);
+                am.setStreamVolume(AudioManager.STREAM_SYSTEM,e.getRing(),0);
+                am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,e.getRing(),0);
+            }
+        }else{
+            am.setStreamVolume(AudioManager.STREAM_RING,e.getRing(),0);
+            am.setStreamVolume(AudioManager.STREAM_SYSTEM,e.getRing(),0);
+            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,e.getRing(),0);
+        }
         am.setStreamVolume(AudioManager.STREAM_RING,e.getRing(),0);
         //如果当前有音乐播放，则不改变音量。
         if(!am.isMusicActive()){
@@ -105,16 +135,28 @@ public class SoundSetService extends Service {
         am.setStreamVolume(AudioManager.STREAM_ALARM,e.getAlarm(),0);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        LOG.d(TAG,"..............onDestroy");
+
+    }
+
     public class MyBinder extends Binder{
         public boolean isRuning(){
             return isRun;
         }
         public void start(){
             isRun=true;
+            //修改配置文件
+            preferences.edit().putBoolean("isRun",true).commit();
         }
         public void end(){
             isRun=false;
+            //修改配置文件
+            preferences.edit().putBoolean("isRun",false).commit();
         }
     }
+
 
 }

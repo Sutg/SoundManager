@@ -1,9 +1,12 @@
 package com.example.administrator.soundmanager;
 
 import android.app.AlertDialog;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -33,12 +36,13 @@ public class EditEventActivity extends BasicActivity {
     private int ringMax,musicMax,alarmMax,callMax;
     private Calendar calendar;
     private int mHour,mMinute;
-
+    private NotificationManager notificationManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_event);
         eventId=getIntent().getIntExtra("eventId",-1);
+        notificationManager=(NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
         loadData();
         initView();
     }
@@ -233,7 +237,19 @@ public class EditEventActivity extends BasicActivity {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
             if(seekBar==ringBar){
-                am.setStreamVolume(AudioManager.STREAM_RING,i,0);
+                //版本控制
+                if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+                    if(notificationManager!=null&&notificationManager.isNotificationPolicyAccessGranted()){
+                        am.setStreamVolume(AudioManager.STREAM_RING,i,0);
+                        am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,0);
+                        am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,0);
+                    }
+
+                }else{
+                    am.setStreamVolume(AudioManager.STREAM_RING,i,0);
+                    am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,0);
+                    am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,0);
+                }
                 event.setRing(i);
             }else if (seekBar==musicBar){
                 am.setStreamVolume(AudioManager.STREAM_MUSIC,i,0);
@@ -250,7 +266,6 @@ public class EditEventActivity extends BasicActivity {
         public void onStartTrackingTouch(SeekBar seekBar) {
 
         }
-
         @Override
         public void onStopTrackingTouch(SeekBar seekBar) {
 
