@@ -16,8 +16,8 @@ public class BootReceiver extends BroadcastReceiver {
         if (action.equals("android.intent.action.BOOT_COMPLETED"))
         {
             LOG.d("BootReceiver","..............startService");
-            Intent i = new Intent(context, SoundSetService.class);
-            context.startService(i);
+            Intent i = new Intent(context, MainActivity.class);
+            context.startActivity(i);
         }
     }
 }
