@@ -32,6 +32,9 @@ public class MainActivity extends BasicActivity {
     private NotificationManager notificationManager;
 
     private SoundSetService.MyBinder soundSer;
+
+    //是否首次打开界面
+    private boolean firestOpen=true;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,7 +54,7 @@ public class MainActivity extends BasicActivity {
         serviceBox=(CheckBox) findViewById(R.id.main_service_set);
         serviceBox.setOnClickListener(listener);
         //根据配置文件设置是否选中。
-        serviceBox.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isRun",true));
+        serviceBox.setChecked(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isRun",false));
 
         ringBar=(SeekBar)findViewById(R.id.main_event_ring);
         ringBar.setOnSeekBarChangeListener(barChangeListener);
@@ -87,17 +90,25 @@ public class MainActivity extends BasicActivity {
 
     //设置音量管理服务的运行。
     void doServiceSet(){
-        if(soundSer!=null){
-            if (soundSer.isRuning()){
-                soundSer.end();
-                serviceBox.setChecked(false);
+        if(!serviceBox.isChecked()){
+            if(soundSer!=null){
+                if(!soundSer.isRuning()){
+                }else{
+                    soundSer.end();
+                }
             }else{
-                soundSer.start();
-                serviceBox.setChecked(true);
             }
         }else{
-            bindService(new Intent(MainActivity.this,SoundSetService.class),serviceConnection,0);
-            startService(new Intent(MainActivity.this,SoundSetService.class));
+            if(soundSer!=null){
+                if(soundSer.isRuning()){
+                }else{
+                    soundSer.start();
+                }
+            }else{
+                bindService(new Intent(MainActivity.this,SoundSetService.class),serviceConnection,0);
+                startService(new Intent(MainActivity.this,SoundSetService.class));
+                serviceBox.setChecked(false);
+            }
         }
     }
 
@@ -133,6 +144,7 @@ public class MainActivity extends BasicActivity {
         LOG.d(TAG,"..............onStart");
         changeBar();
         //注册广播监听，音量改变事件。
+        firestOpen=false;
         myRegisterReceiver();
         //获取权限
         getDoNotDisturb();
@@ -142,6 +154,7 @@ public class MainActivity extends BasicActivity {
     protected void onStop() {
         super.onStop();
         LOG.d(TAG,"..............onStop");
+        firestOpen=true;
         //销毁注册的广播。
         myUnRegisterRecevier();
     }
@@ -150,6 +163,7 @@ public class MainActivity extends BasicActivity {
     protected void onDestroy() {
         super.onDestroy();
         LOG.d(TAG,"..............onDestroy");
+
         //服务解绑
         unbindService(serviceConnection);
     }
@@ -177,41 +191,44 @@ public class MainActivity extends BasicActivity {
     SeekBar.OnSeekBarChangeListener barChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            //seekBar.setPressed(b);
-            //seekBar.setProgress(i);  bug
-            if(seekBar==ringBar){
-                //版本控制
-              if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
-                  if(notificationManager!=null&&notificationManager.isNotificationPolicyAccessGranted()){
+            if(firestOpen){
+            }else{
+                //seekBar.setPressed(b);
+                //seekBar.setProgress(i);  bug
+                if(seekBar==ringBar){
+                    //版本控制
+                    if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+                        if(notificationManager!=null&&notificationManager.isNotificationPolicyAccessGranted()){
 
-                      am.setStreamVolume(AudioManager.STREAM_RING,i,AudioManager.FLAG_SHOW_UI);
-                      am.adjustStreamVolume (AudioManager.STREAM_RING, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                            am.setStreamVolume(AudioManager.STREAM_RING,i,AudioManager.FLAG_SHOW_UI);
+                            am.adjustStreamVolume (AudioManager.STREAM_RING, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
 
-                      am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,AudioManager.FLAG_SHOW_UI);
-                      am.adjustStreamVolume (AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                            am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,AudioManager.FLAG_SHOW_UI);
+                            am.adjustStreamVolume (AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
 
-                      am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,AudioManager.FLAG_SHOW_UI);
-                      am.adjustStreamVolume (AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
-                  }
-              }else{
-                  am.setStreamVolume(AudioManager.STREAM_RING,i,AudioManager.FLAG_SHOW_UI);
-                  am.adjustStreamVolume (AudioManager.STREAM_RING, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,AudioManager.FLAG_SHOW_UI);
+                            am.adjustStreamVolume (AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                        }
+                    }else{
+                        am.setStreamVolume(AudioManager.STREAM_RING,i,AudioManager.FLAG_SHOW_UI);
+                        am.adjustStreamVolume (AudioManager.STREAM_RING, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
 
-                  am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,AudioManager.FLAG_SHOW_UI);
-                  am.adjustStreamVolume (AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                        am.setStreamVolume(AudioManager.STREAM_SYSTEM,i,AudioManager.FLAG_SHOW_UI);
+                        am.adjustStreamVolume (AudioManager.STREAM_SYSTEM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
 
-                  am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,AudioManager.FLAG_SHOW_UI);
-                  am.adjustStreamVolume (AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
-              }
-            }else if (seekBar==musicBar){
-                am.setStreamVolume(AudioManager.STREAM_MUSIC,i,AudioManager.FLAG_SHOW_UI);
-                am.adjustStreamVolume (AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
-            }else if (seekBar==callBar){
-                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL,i,AudioManager.FLAG_SHOW_UI);
-                am.adjustStreamVolume (AudioManager.STREAM_VOICE_CALL, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
-            }else if (seekBar==alarmBar){
-                am.setStreamVolume(AudioManager.STREAM_ALARM,i,AudioManager.FLAG_SHOW_UI);
-                am.adjustStreamVolume (AudioManager.STREAM_ALARM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                        am.setStreamVolume(AudioManager.STREAM_NOTIFICATION,i,AudioManager.FLAG_SHOW_UI);
+                        am.adjustStreamVolume (AudioManager.STREAM_NOTIFICATION, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                    }
+                }else if (seekBar==musicBar){
+                    am.setStreamVolume(AudioManager.STREAM_MUSIC,i,AudioManager.FLAG_SHOW_UI);
+                    am.adjustStreamVolume (AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                }else if (seekBar==callBar){
+                    am.setStreamVolume(AudioManager.STREAM_VOICE_CALL,i,AudioManager.FLAG_SHOW_UI);
+                    am.adjustStreamVolume (AudioManager.STREAM_VOICE_CALL, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                }else if (seekBar==alarmBar){
+                    am.setStreamVolume(AudioManager.STREAM_ALARM,i,AudioManager.FLAG_SHOW_UI);
+                    am.adjustStreamVolume (AudioManager.STREAM_ALARM, AudioManager.ADJUST_SAME, AudioManager.FLAG_PLAY_SOUND);
+                }
             }
         }
         @Override

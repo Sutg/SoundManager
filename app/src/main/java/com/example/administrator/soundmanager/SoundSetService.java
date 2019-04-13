@@ -28,12 +28,13 @@ import java.util.List;
 public class SoundSetService extends Service {
     private final String TAG="SoundSetService";
     private List<Event> eventList;
-    private boolean isRun=true;
+    private boolean isRun=false;
     private int stopCounter=0;
     private AudioManager am;
     private NotificationManager notificationManager;
     //配置文件
     SharedPreferences preferences;
+    private MyBinder mBinder;
     private Handler soundHandler=new Handler(){
         @Override
         public void handleMessage(Message msg) {
@@ -50,10 +51,10 @@ public class SoundSetService extends Service {
         //获得配置文件
        preferences=PreferenceManager.getDefaultSharedPreferences(this);
         //读取数据，如果无法找到，则使用默认值
-        isRun=preferences.getBoolean("isRun",true);
-
+        isRun=preferences.getBoolean("isRun",false);
         //免打扰权限
         notificationManager=(NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        mBinder=new MyBinder();
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -74,17 +75,12 @@ public class SoundSetService extends Service {
     public IBinder onBind(Intent intent) {
         LOG.d(TAG,"..............onBind");
         // TODO: Return the communication channel to the service.
-       return new MyBinder();
+       return mBinder;
     }
 
     //设置系统音量
     private void setSysSound(){
         if(isRun){
-            if(am==null){
-                am= (AudioManager) getSystemService(this.AUDIO_SERVICE);
-            }
-            //按开始时间降序排列
-           Collections.sort(eventList);
             Event currentEvent=null;
             //获取当前时间
             Calendar calendar= Calendar.getInstance();
@@ -92,8 +88,11 @@ public class SoundSetService extends Service {
             int mHour= calendar.get(Calendar.HOUR_OF_DAY);
             int mMinute=calendar.get(Calendar.MINUTE);
             int currentTime=mHour*60+mMinute;
-            LOG.d(TAG,"currentTime= "+currentTime);
-            //得到当前有效事件。
+
+            //按开始时间降序排列
+           Collections.sort(eventList);
+
+            //计算当前有效事件。
             Iterator<Event> eventIterator=eventList.iterator();
             while (eventIterator.hasNext()){
                 Event e=eventIterator.next();
@@ -107,14 +106,19 @@ public class SoundSetService extends Service {
                 setSysSound(currentEvent);
                 LOG.d(TAG,"currentEvent : "+currentEvent.toString());
             }
-        }else{//5分钟内不启动自动模式，服务关闭。
+            stopCounter=0;
+        }else{//3分钟内不启动自动模式，服务关闭。
             stopCounter++;
-            if(stopCounter>=5){
+            if(stopCounter>=3){
+                stopCounter=0;
                 stopSelf();
             }
         }
     }
     private void setSysSound(Event e){
+        if(am==null){
+            am= (AudioManager) getSystemService(this.AUDIO_SERVICE);
+        }
         if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
             if(notificationManager!=null&&notificationManager.isNotificationPolicyAccessGranted()) {
                 am.setStreamVolume(AudioManager.STREAM_RING,e.getRing(),0);
@@ -139,7 +143,7 @@ public class SoundSetService extends Service {
     public void onDestroy() {
         super.onDestroy();
         LOG.d(TAG,"..............onDestroy");
-
+        mBinder=null;
     }
 
     public class MyBinder extends Binder{
@@ -148,13 +152,14 @@ public class SoundSetService extends Service {
         }
         public void start(){
             isRun=true;
-            //修改配置文件
-            preferences.edit().putBoolean("isRun",true).commit();
+            setSysSound();
+            //更新配置文件
+            preferences.edit().putBoolean("isRun",isRun).commit();
         }
         public void end(){
             isRun=false;
-            //修改配置文件
-            preferences.edit().putBoolean("isRun",false).commit();
+            //更新配置文件
+            preferences.edit().putBoolean("isRun",isRun).commit();
         }
     }
 
