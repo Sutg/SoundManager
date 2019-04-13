@@ -3,7 +3,7 @@ package com.example.administrator.soundmanager.util;
 import android.util.Log;
 
 public class LOG {
-    private static boolean isDebug=true;
+    private static boolean isDebug=false;
     public static void d(String tag,String content){
         if(isDebug){
             Log.d(tag,content);
