@@ -35,6 +35,8 @@ public class SoundSetService extends Service {
     //配置文件
     SharedPreferences preferences;
     private MyBinder mBinder;
+    //判断是否为服务自己启动
+    private boolean fromMySelf=false;
     private Handler soundHandler=new Handler(){
         @Override
         public void handleMessage(Message msg) {
@@ -62,13 +64,15 @@ public class SoundSetService extends Service {
         //设置系统音量
         Message msg=soundHandler.obtainMessage();
         soundHandler.sendMessage(msg);
-        //注册定时事件，每过1分钟自动唤醒服务，使得服务得以长期运行。如果过服务被销毁。则失效
+        fromMySelf=intent.getBooleanExtra("fromMySelf",false);
+        //注册定时事件，每过1分钟通过广播自动唤醒服务，使得服务得以长期运行。如果过服务被销毁,应用无自启动权限则失效
         final AlarmManager alarmManager=(AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        final PendingIntent weakupIntent=PendingIntent.getService(this,0,new Intent(this, SoundSetService.class),0);
+        Intent i=new Intent(this, SoundSetReceiver.class);
+        final PendingIntent weakUpIntent=PendingIntent.getBroadcast(this,0,i,0);
         alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime()+60000, weakupIntent);
-       // 系统自动回收之后，重启该服务。
-        return START_STICKY;
+                SystemClock.elapsedRealtime()+60000, weakUpIntent);
+       // 返回
+        return super.onStartCommand(intent,flags,startId);
     }
 
     @Override
@@ -106,12 +110,17 @@ public class SoundSetService extends Service {
                 setSysSound(currentEvent);
                 LOG.d(TAG,"currentEvent : "+currentEvent.toString());
             }
-            stopCounter=0;
-        }else{//3分钟内不启动自动模式，服务关闭。
-            stopCounter++;
-            if(stopCounter>=3){
+            //服务关闭计数清空
+            if(stopCounter==0){
+            }else{
+                stopCounter=0;
+            }
+        }else if(fromMySelf){//3次试探之后，服务关闭。
+            if(stopCounter>3){
                 stopCounter=0;
                 stopSelf();
+            }else{
+                stopCounter++;
             }
         }
     }

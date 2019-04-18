@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -34,7 +35,7 @@ public class MainActivity extends BasicActivity {
     private SoundSetService.MyBinder soundSer;
 
     //是否首次打开界面
-    private boolean firestOpen=true;
+    private boolean firstOpen=true;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,8 +44,11 @@ public class MainActivity extends BasicActivity {
        initView();
         initBar();
         //开启音量管理服务。
-        startService(new Intent(MainActivity.this,SoundSetService.class));
-        bindService(new Intent(MainActivity.this,SoundSetService.class),serviceConnection,0);
+        if(soundSer!=null){
+        }else{
+            startService(new Intent(MainActivity.this,SoundSetService.class));
+            bindService(new Intent(MainActivity.this,SoundSetService.class),serviceConnection,0);
+        }
     }
     //初始化控件
     void initView() {
@@ -91,12 +95,12 @@ public class MainActivity extends BasicActivity {
     //设置音量管理服务的运行。
     void doServiceSet(){
         if(!serviceBox.isChecked()){
-            if(soundSer!=null){
+            if(soundSer==null){
+            }else{
                 if(!soundSer.isRuning()){
                 }else{
                     soundSer.end();
                 }
-            }else{
             }
         }else{
             if(soundSer!=null){
@@ -144,7 +148,7 @@ public class MainActivity extends BasicActivity {
         LOG.d(TAG,"..............onStart");
         changeBar();
         //注册广播监听，音量改变事件。
-        firestOpen=false;
+        firstOpen=false;
         myRegisterReceiver();
         //获取权限
         getDoNotDisturb();
@@ -154,7 +158,7 @@ public class MainActivity extends BasicActivity {
     protected void onStop() {
         super.onStop();
         LOG.d(TAG,"..............onStop");
-        firestOpen=true;
+        firstOpen=true;
         //销毁注册的广播。
         myUnRegisterRecevier();
     }
@@ -191,7 +195,7 @@ public class MainActivity extends BasicActivity {
     SeekBar.OnSeekBarChangeListener barChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            if(firestOpen){
+            if(firstOpen){
             }else{
                 //seekBar.setPressed(b);
                 //seekBar.setProgress(i);  bug
@@ -269,4 +273,20 @@ public class MainActivity extends BasicActivity {
             LOG.d(TAG,"..............bind failed");
         }
     };
+
+    public static void jumpStartInterface(Context context) {
+        Intent intent = new Intent();
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // 将用户引导到系统设置页面
+        if (Build.VERSION.SDK_INT >= 9) {
+            LOG.e("HLQ_Struggle", "APPLICATION_DETAILS_SETTINGS");
+            intent.setAction("android.settings.APPLICATION_DETAILS_SETTINGS");
+            intent.setData(Uri.fromParts("package", context.getPackageName(), null));
+        } else if (Build.VERSION.SDK_INT <= 8) {
+            intent.setAction(Intent.ACTION_VIEW);
+            intent.setClassName("com.android.settings", "com.android.settings.InstalledAppDetails");
+            intent.putExtra("com.android.settings.ApplicationPkgName", context.getPackageName());
+        }
+        context.startActivity(intent);
+    }
 }
